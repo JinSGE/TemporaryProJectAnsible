@@ -1,0 +1,11 @@
+---
+- name: 1. ModSecurity 관련 패키지 설치
+  dnf:
+    name: [mod_security, mod_security_crs]
+    state: present
+
+- name: 2. WAF 기본 규칙 적용
+  copy:
+    src: modsecurity.conf
+    dest: /etc/httpd/conf.d/mod_security.conf
+  notify: restart haproxy  # HAProxy와 연동된 경우 재시작 트리거

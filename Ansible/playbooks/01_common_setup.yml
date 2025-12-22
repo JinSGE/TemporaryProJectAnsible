@@ -1,0 +1,7 @@
+---
+# playbooks/01_common_setup.yml 또는 site.yml
+- name: 전체 서버 기초 환경 설정
+  hosts: all_nodes
+  become: yes
+  roles:
+    - common

@@ -1,0 +1,23 @@
+---
+- name: 1. 쿠버네티스 클러스터 초기화 (kubeadm init)
+  shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+  register: kube_init
+  ignore_errors: yes # 이미 초기화된 경우 에러 방지
+
+- name: 2. 관리자 설정 파일(kubeconfig) 배치
+  file:
+    path: /root/.kube
+    state: directory
+
+- name: 3. 설정 파일 복사
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: yes
+
+- name: 4. 네트워크 플러그인(CNI - Flannel) 설치
+  shell: kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+
+- name: 5. 마스터 노드 스케줄링 허용 (노드가 1대일 경우 필수)
+  shell: kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+  ignore_errors: yes

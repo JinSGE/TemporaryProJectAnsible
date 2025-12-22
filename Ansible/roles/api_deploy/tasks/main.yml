@@ -1,0 +1,21 @@
+---
+- name: 1. API 컨테이너 실행 (Weather API)
+  docker_container:
+    name: weather-api
+    image: fastapi-weather:latest  # 실제 이미지 이름으로 수정
+    state: started
+    published_ports: "8001:8000"
+
+- name: 2. API 컨테이너 실행 (Logistics API)
+  docker_container:
+    name: logistics-api
+    image: fastapi-logistics:latest
+    state: started
+    published_ports: "8002:8000"
+
+- name: 3. API 컨테이너 실행 (Energy API)
+  docker_container:
+    name: energy-api
+    image: fastapi-energy:latest
+    state: started
+    published_ports: "8003:8000"

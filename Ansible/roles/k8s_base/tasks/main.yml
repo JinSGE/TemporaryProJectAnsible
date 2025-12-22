@@ -1,0 +1,40 @@
+---
+# 1. containerd 설치를 위한 Docker 리포지토리 설정
+- name: Docker 리포지토리 추가
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+
+# 2. containerd 패키지 설치 (에러 해결: Unit not found 방지)
+- name: containerd.io 패키지 설치
+  dnf:
+    name: containerd.io
+    state: present
+
+# 3. 설정 디렉토리 생성 (에러 해결: No such file or directory 방지)
+- name: containerd 설정 디렉토리 생성
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+# 4. 기본 설정 파일 생성 및 수정 (CRI 활성화 + SystemdCgroup 설정)
+- name: containerd 기본 설정 생성 및 CRI 활성화
+  shell: |
+    containerd config default > /etc/containerd/config.toml
+    sed -i 's/disabled_plugins = \["cri"\]/disabled_plugins = []/g' /etc/containerd/config.toml
+    sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+
+# 5. containerd 서비스 시작
+- name: containerd 서비스 활성화 및 시작
+  service:
+    name: containerd
+    state: restarted
+    enabled: yes
+
+# 6. K8s 바이너리 설치 (kubeadm, kubelet 등)
+- name: K8s 패키지 설치
+  dnf:
+    name: [kubelet, kubeadm, kubectl]
+    state: present
+    disable_excludes: kubernetes

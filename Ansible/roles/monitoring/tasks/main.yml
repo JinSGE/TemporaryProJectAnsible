@@ -1,0 +1,12 @@
+---
+- name: 1. Helm 설치 (모니터링 도구 배포용)
+  shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+- name: 2. Prometheus community 레포지토리 추가
+  shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+- name: 3. Prometheus & Grafana 통합 스택 설치
+  shell: |
+    helm repo update
+    helm install monitoring-stack prometheus-community/kube-prometheus-stack \
+    --namespace monitoring --create-namespace

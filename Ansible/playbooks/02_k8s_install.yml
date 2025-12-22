@@ -1,0 +1,7 @@
+---
+- name: 쿠버네티스 마스터 노드 구축
+  hosts: k8s_cluster_monitering_servers
+  become: yes
+  roles:
+    - k8s_base    # OS 환경 최적화 및 설치 (Base)
+    - k8s_master  # 클러스터 초기화 및 네트워크 설정 (Master)

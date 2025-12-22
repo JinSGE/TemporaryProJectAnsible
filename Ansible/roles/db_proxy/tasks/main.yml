@@ -1,0 +1,16 @@
+---
+- name: 1. ProxySQL 리포지토리 추가
+  get_url:
+    url: https://repo.proxysql.com/ProxySQL/proxysql-2.5.x/centos/7/proxysql-2.5.x.repo
+    dest: /etc/yum.repos.d/proxysql.repo
+
+- name: 2. ProxySQL 설치
+  dnf:
+    name: proxysql
+    state: present
+
+- name: 3. ProxySQL 서비스 시작
+  service:
+    name: proxysql
+    state: started
+    enabled: yes

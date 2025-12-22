@@ -1,0 +1,18 @@
+---
+# Step 1: 모든 서버 기초 환경 구축 (PC1~PC6)
+- import_playbook: playbooks/01_common_setup.yml
+
+# # Step 2: PC1 로드밸런서 및 보안 설정
+# - hosts: LB_EDGE_servers
+#   roles:
+#     - HAproxy
+#     - WAF
+
+# # Step 3: PC4 데이터베이스 및 스토리지 설정
+# - import_playbook: playbooks/04_db_storage_setup.yml
+
+# Step 4: PC6 쿠버네티스 클러스터 구축
+- import_playbook: playbooks/02_k8s_install.yml
+
+# # Step 5: 모니터링 및 앱 배포
+# - import_playbook: playbooks/03_deploy_monitoring.yml
