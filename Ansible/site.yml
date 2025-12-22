@@ -24,27 +24,27 @@
 #     - common
 
 # - name: 2단계 - Edge 보안 및 로드밸런서 (PC1)
-#   hosts: PC1-EDGE
+#   hosts: LB_EDGE_servers
 #   roles:
 #     - HAproxy
 #     - WAF
 
 # - name: 3단계 - 웹 및 API 서버 인프라 (PC2, PC3)
-#   hosts: web_api_servers
+#   hosts: WEB_API_servers
 #   roles:
 #     - docker
 #     - nginx        # PC2 전용
 #     - api_deploy   # PC3 전용
 
 # - name: 4단계 - DB 및 스토리지 (PC4)
-#   hosts: PC4-DB
+#   hosts: DB_servers
 #   roles:
 #     - mysql_master_slave
 #     - db_proxy
 #     - storage_mount
 
 # - name: 5단계 - K8s 플랫폼 및 모니터링 (PC6)
-#   hosts: k8s_cluster
+#   hosts: k8s_cluster_monitering_servers
 #   roles:
 #     - k8s_base
 #     - k8s_master

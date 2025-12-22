@@ -1,0 +1,20 @@
+# # 1. 연결 정보
+# ansible_host: 172.16.6.66
+# ansible_user: root
+
+# # 2. 쿠버네티스 클러스터 설정 변수
+# k8s_version: "1.28"
+# pod_network_cidr: "10.244.0.0/16"  # Flannel CNI 표준 대역
+# node_role: "master"
+
+# # 3. 컨테이너 런타임 설정 (containerd)
+# cri_socket: "unix:///var/run/containerd/containerd.sock"
+# systemd_cgroup: true
+
+# # 4. 모니터링(Step 5) 관련 변수
+# monitoring_namespace: "monitoring"
+# helm_release_name: "k8s-monitor"
+# grafana_admin_password: "admin_password_123!"  # 보안상 필요시 수정
+
+# # 5. 하이브리드 연결 설정 (AWS Cloud 연동 시 활용)
+# cloud_connection_enabled: true

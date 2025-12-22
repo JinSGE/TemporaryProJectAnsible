@@ -1,0 +1,28 @@
+---
+# 1. 모든 서버 공통 접속 정보
+ansible_user: root
+
+# 2. 지역 및 시스템 설정
+timezone: "Asia/Seoul"
+
+# 3. 서버 간 통신을 위한 호스트 매핑 리스트
+# 이 리스트를 수정하면 모든 서버의 /etc/hosts가 한 번에 업데이트됩니다.
+infrastructure_hosts:
+  - { ip: "172.16.6.61", name: "PC1-EDGE" }
+  - { ip: "172.16.6.62", name: "PC2-WEB" }
+  - { ip: "172.16.6.63", name: "PC3-API" }
+  - { ip: "172.16.6.64", name: "PC4-DB" }
+  - { ip: "172.16.6.65", name: "PC5-OPS" }
+  - { ip: "172.16.6.66", name: "PC6-K8S" }
+
+# 4. 공통 설치 필수 패키지
+common_packages:
+  - vim
+  - wget
+  - curl
+  - net-tools
+  - git
+
+# 5. 보안 및 방화벽 기본 상태
+selinux_state: disabled
+firewall_state: started

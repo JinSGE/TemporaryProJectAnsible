@@ -1,6 +1,6 @@
-ansible_host: 172.16.6.64
-mysql_role: "master" # PC4가 Master임을 명시
-mysql_server_id: 101
+# ansible_host: 172.16.6.64
+# mysql_role: "master" # PC4가 Master임을 명시
+# mysql_server_id: 101
 
 # 스토리지 정보
 # nas_ip: "172.16.6.100"

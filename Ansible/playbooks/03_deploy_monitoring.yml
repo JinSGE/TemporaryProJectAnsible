@@ -1,0 +1,8 @@
+---
+- name: 4단계 - DB 및 스토리지 통합 설정 (PC4)
+  hosts: db_group     # inventory.ini에 정의된 그룹명
+  become: yes
+  roles:
+    - mysql_master_slave  # MySQL 설치 및 복제 설정
+    - db_proxy            # ProxySQL 설치 및 부하 분산 설정
+    - storage_mount       # SAN/NAS 스토리지 마운트

@@ -1,0 +1,6 @@
+---
+- name: 5단계 - 모니터링 시스템 배포 (PC6)
+  hosts: k8s_cluster  # inventory.ini에 정의된 그룹명
+  become: yes         # root 권한 사용
+  roles:
+    - monitoring      # roles/monitoring/tasks/main.yml 실행
