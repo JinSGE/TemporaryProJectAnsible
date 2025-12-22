@@ -19,3 +19,15 @@
     image: fastapi-energy:latest
     state: started
     published_ports: "8003:8000"
+
+
+# # roles/api_deploy/tasks/main.yml (변수 활용 버전)
+# - name: API 컨테이너들을 일괄 실행합니다
+#   docker_container:
+#     name: "{{ item.name }}"
+#     image: "{{ item.image }}"
+#     state: started
+#     restart_policy: always
+#     published_ports:
+#       - "{{ item.host_port }}:{{ api_internal_port }}"
+#   loop: "{{ deploy_apis }}"  # host_vars에 정의한 리스트를 순회합니다.

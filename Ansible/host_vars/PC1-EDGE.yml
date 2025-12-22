@@ -1,0 +1,8 @@
+# ansible_host: 172.16.6.61
+# http_port: 80
+# waf_enabled: true
+# # HAProxy에서 사용할 백엔드 정보
+# web_server_ip: "172.16.6.62"
+# api_server_ip: "172.16.6.63"
+# # AWS 하이브리드 연결 시 필요한 공인 IP 등
+# external_ip: "1.2.3.4"

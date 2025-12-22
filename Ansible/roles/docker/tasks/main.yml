@@ -14,3 +14,15 @@
     name: docker
     state: started
     enabled: yes
+
+# ---
+# - name: Docker 설치
+#   dnf:
+#     name: [docker-ce, docker-ce-cli, containerd.io]
+#     state: present
+
+# - name: Docker 시작
+#   service:
+#     name: docker
+#     state: started
+#     enabled: yes

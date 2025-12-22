@@ -9,3 +9,15 @@
     src: modsecurity.conf
     dest: /etc/httpd/conf.d/mod_security.conf
   notify: restart haproxy  # HAProxy와 연동된 경우 재시작 트리거
+
+#---
+# - name: ModSecurity(WAF) 패키지 설치
+#   dnf:
+#     name: [mod_security, mod_security_crs]
+#     state: present
+
+# - name: WAF 기본 설정 적용
+#   copy:
+#     content: "SecRuleEngine On"
+#     dest: /etc/httpd/conf.d/mod_security.conf
+#   notify: restart haproxy
