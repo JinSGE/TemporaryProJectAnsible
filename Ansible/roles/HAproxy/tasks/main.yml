@@ -15,3 +15,8 @@
     name: haproxy
     state: started
     enabled: yes
+    
+- name: PC1 마스커레이딩 및 포워딩 활성화
+  block:
+    - sysctl: { name: 'net.ipv4.ip_forward', value: '1', state: 'present' }
+    - firewalld: { masquerade: 'yes', state: 'enabled', permanent: 'yes', immediate: 'yes' }
