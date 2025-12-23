@@ -1,8 +1,6 @@
 ---
-- name: 4단계 - DB 및 스토리지 통합 설정 (PC4)
-  hosts: db_group     # inventory.ini에 정의된 그룹명
-  become: yes
+- name: 5단계 - 모니터링 시스템 배포 (PC6)
+  hosts: k8s_cluster_monitering_servers  # inventory.ini에 정의된 그룹명
+  become: yes         # root 권한 사용
   roles:
-    - mysql_master_slave  # MySQL 설치 및 복제 설정
-    - db_proxy            # ProxySQL 설치 및 부하 분산 설정
-    - storage_mount       # SAN/NAS 스토리지 마운트
+    - monitoring      # roles/monitoring/tasks/main.yml 실행

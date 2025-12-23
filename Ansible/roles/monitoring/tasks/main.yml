@@ -1,12 +1,36 @@
----
-- name: 1. Helm 설치 (모니터링 도구 배포용)
-  shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+# =================================================================
+# 1. Helm 패키지 매니저 설치
+# [Physical Architecture 적용: 제어 노드(Ansible Control)의 관리 도구 표준화]
+# =================================================================
+- name: 1. Helm 설치 스크립트 다운로드
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get_helm.sh
+    mode: '0755'
 
+- name: 1-1. Helm 실행 파일 설치
+  # - 멱등성(Idempotency) 보장: /usr/local/bin/helm 파일이 이미 존재시, 실행 건너뛰기.
+  ansible.builtin.shell: /tmp/get_helm.sh
+  args:
+    creates: /usr/local/bin/helm
+
+# =================================================================
+# 2. 레포지토리 관리
+# [Logical Architecture 적용: API 계층을 통한 외부 모니터링 소스 연동]
+# =================================================================
 - name: 2. Prometheus community 레포지토리 추가
-  shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-
-- name: 3. Prometheus & Grafana 통합 스택 설치
-  shell: |
+  # - 최신 모니터링 차트 확보를 위해 레포지토리를 등록, 인덱스 업데이트.
+  ansible.builtin.shell: |
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
     helm repo update
-    helm install monitoring-stack prometheus-community/kube-prometheus-stack \
-    --namespace monitoring --create-namespace
+  register: helm_repo_result
+  # - 이미 등록된 경우 'changed' 상태가 되지 않도록 제어, 불필요한 리소스 소모를 방지.
+  changed_when: "'has been added' in helm_repo_result.stdout"
+
+# =================================================================
+# 3. Prometheus & Grafana 통합 스택 배포
+# [Physical/Logical Architecture 통합: VMware 5대 노드 환경 최적화]
+# =================================================================
+- name: 3. Prometheus & Grafana 통합 스택 설치 (upgrade --install 사용)
+  # - upgrade --install: 기존 설치 유무와 상관없이 상태를 일관되게 유지(Conflict 방지).
+  ansible.builtin.shell: |

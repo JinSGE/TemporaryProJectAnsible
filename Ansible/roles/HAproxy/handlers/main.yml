@@ -1,0 +1,7 @@
+---
+# roles/HAproxy/handlers/main.yml
+# 이 핸들러는 tasks/main.yml의 template 태스크에서 'notify'에 의해 호출될 때만 실행.
+- name: restart haproxy
+  ansible.builtin.service:
+    name: haproxy
+    state: restarted

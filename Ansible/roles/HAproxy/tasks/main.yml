@@ -1,22 +1,70 @@
 ---
-- name: 1. HAProxy 패키지 설치
-  dnf:
-    name: haproxy
-    state: present
+- name: PC1-EDGE 서버 설정 (LB + Gateway)
+  hosts: LB_EDGE_servers
+  become: yes
+  tasks:
 
-- name: 2. HAProxy 설정 파일 배포 (Jinja2 템플릿 사용)
-  template:
-    src: haproxy.cfg.j2
-    dest: /etc/haproxy/haproxy.cfg
-  notify: restart haproxy
+    # 1. 패키지 관리
+    - name: 1. HAProxy 패키지 설치
+      ansible.builtin.dnf:
+        name: haproxy
+        state: present
 
-- name: 3. HAProxy 서비스 활성화
-  service:
-    name: haproxy
-    state: started
-    enabled: yes
-    
-- name: PC1 마스커레이딩 및 포워딩 활성화
-  block:
-    - sysctl: { name: 'net.ipv4.ip_forward', value: '1', state: 'present' }
-    - firewalld: { masquerade: 'yes', state: 'enabled', permanent: 'yes', immediate: 'yes' }
+    # 2. 설정 관리 (Jinja2)
+    - name: 2. HAProxy 설정 파일 배포
+      ansible.builtin.template:
+        src: haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart haproxy
+
+    # [추가] SELinux 설정: HAProxy가 네트워크 연결을 할 수 있도록 허용 (RHEL/CentOS 계열 필수)
+    - name: SELinux HAProxy 네트워크 연결 허용
+      ansible.posix.seboolean:
+        name: haproxy_connect_any
+        state: yes
+        persistent: yes
+
+    # 3. 서비스 관리
+    - name: 3. HAProxy 서비스 시작 및 활성화
+      ansible.builtin.service:
+        name: haproxy
+        state: started
+        enabled: yes
+
+    # 4. 네트워크 및 방화벽 설정 (Gateway & Masquerading)
+    - name: 4. 게이트웨이 기능 및 방화벽 설정
+      block:
+        - name: IPv4 패킷 포워딩 활성화
+          ansible.posix.sysctl:
+            name: net.ipv4.ip_forward
+            value: '1'
+            sysctl_set: yes
+            state: present
+            reload: yes
+
+        - name: 방화벽 마스커레이딩 활성화
+          ansible.posix.firewalld:
+            masquerade: 'yes'
+            state: enabled
+            permanent: yes
+            immediate: yes
+
+        # [추가] 로드밸런서 서비스 포트 허용 (외부에서 접근 가능하도록)
+        - name: 방화벽 HTTP/HTTPS 포트 허용
+          ansible.posix.firewalld:
+            service: "{{ item }}"
+            state: enabled
+            permanent: yes
+            immediate: yes
+          loop:
+            - http
+            - https
+
+  handlers:
+    - name: restart haproxy
+      ansible.builtin.service:
+        name: haproxy
+        state: restarted

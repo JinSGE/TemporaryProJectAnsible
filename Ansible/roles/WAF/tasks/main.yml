@@ -1,23 +1,60 @@
 ---
-- name: 1. ModSecurity 관련 패키지 설치
-  dnf:
-    name: [mod_security, mod_security_crs]
+# 1. 패키지 설치: Nginx 및 ModSecurity 커넥터 설치
+- name: 1. Nginx 및 ModSecurity 관련 패키지 설치
+  ansible.builtin.dnf:
+    name:
+      - nginx
+      - nginx-mod-modsecurity  # Nginx용 ModSecurity 모듈
+      - mod_security_crs       # 코어 규칙 세트
     state: present
 
-- name: 2. WAF 기본 규칙 적용
-  copy:
+# 2. WAF 설정 파일 배포
+- name: 2. ModSecurity 기본 설정 및 규칙 배포
+  ansible.builtin.copy:
     src: modsecurity.conf
-    dest: /etc/httpd/conf.d/mod_security.conf
-  notify: restart haproxy  # HAProxy와 연동된 경우 재시작 트리거
+    dest: /etc/nginx/modsecurity.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
 
-#---
-# - name: ModSecurity(WAF) 패키지 설치
-#   dnf:
-#     name: [mod_security, mod_security_crs]
-#     state: present
+# 3. Nginx 설정 파일 배포 (Jinja2 템플릿 사용)
+# [Logical Architecture 적용: API -> Nginx(LB) -> Data Processing]
+- name: 3. Nginx 설정 파일 배포 (nginx.conf.j2)
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
 
-# - name: WAF 기본 설정 적용
-#   copy:
-#     content: "SecRuleEngine On"
-#     dest: /etc/httpd/conf.d/mod_security.conf
-#   notify: restart haproxy
+# 4. 서비스 관리
+- name: 4. Nginx 서비스 시작 및 활성화
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: yes
+
+# 5. 네트워크 게이트웨이 및 마스커레이딩 (EDGE 서버 핵심 기능)
+# [Physical Architecture 적용: VMware 내부 5대 서버와 AWS Hybrid 연결]
+# - name: 5. EDGE 게이트웨이 설정 (포워딩 및 마스커레이딩)
+#   block:
+#     - name: IPv4 패킷 포워딩 활성화
+#       ansible.posix.sysctl:
+#         name: net.ipv4.ip_forward
+#         value: '1'
+#         sysctl_set: yes
+#         state: present
+#         reload: yes
+
+#     - name: 방화벽 마스커레이딩 및 HTTP 포트 허용
+#       ansible.posix.firewalld:
+#         masquerade: 'yes'
+#         service: "{{ item }}"
+#         state: enabled
+#         permanent: yes
+#         immediate: yes
+#       loop:
+#         - http
+#         - https

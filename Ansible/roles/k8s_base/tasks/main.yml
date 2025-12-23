@@ -1,40 +1,57 @@
 ---
-# 1. containerd 설치를 위한 Docker 리포지토리 설정
-- name: Docker 리포지토리 추가
-  get_url:
+# 1. 패키지 저장소 설정
+# containerd는 Docker 리포지토리에서 제공되므로 해당 경로를 등록.
+- name: 1. Docker 리포지토리 추가 (containerd 설치용)
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/centos/docker-ce.repo
     dest: /etc/yum.repos.d/docker-ce.repo
+    mode: '0644'
 
-# 2. containerd 패키지 설치 (에러 해결: Unit not found 방지)
-- name: containerd.io 패키지 설치
-  dnf:
+# 2. 런타임 패키지 설치
+# 쿠버네티스의 컨테이너 실행을 담당할 엔진인 containerd를 설치.
+- name: 2. containerd.io 패키지 설치
+  ansible.builtin.dnf:
     name: containerd.io
     state: present
 
-# 3. 설정 디렉토리 생성 (에러 해결: No such file or directory 방지)
-- name: containerd 설정 디렉토리 생성
-  file:
+# 3. 설정 경로 준비
+# containerd의 세부 설정 파일(config.toml)이 위치할 디렉토리를 생성.
+- name: 3. containerd 설정 디렉토리 생성
+  ansible.builtin.file:
     path: /etc/containerd
     state: directory
+    owner: root
+    group: root
     mode: '0755'
 
-# 4. 기본 설정 파일 생성 및 수정 (CRI 활성화 + SystemdCgroup 설정)
-- name: containerd 기본 설정 생성 및 CRI 활성화
-  shell: |
+# 4. 컨테이너 런타임 최적화 (핵심 설정)
+# [Logical Architecture 적용: AI/데이터 처리를 위한 컨테이너 환경 최적화]
+# - CRI 활성화: 쿠버네티스가 컨테이너를 제어 가능하게 함.
+# - SystemdCgroup 활성화: 리눅스 시스템 자원 관리 방식 + 쿠버네티스의 방식을 일치시켜 안정성 향상.
+- name: 4. containerd 기본 설정 생성 및 CRI/SystemdCgroup 최적화
+  ansible.builtin.shell: |
     containerd config default > /etc/containerd/config.toml
     sed -i 's/disabled_plugins = \["cri"\]/disabled_plugins = []/g' /etc/containerd/config.toml
     sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+  register: containerd_config_result
+  changed_when: true
 
-# 5. containerd 서비스 시작
-- name: containerd 서비스 활성화 및 시작
-  service:
+# 5. 서비스 실행 관리
+# 설정을 마친 후 컨테이너 엔진을 구동.
+- name: 5. containerd 서비스 활성화 및 시작
+  ansible.builtin.service:
     name: containerd
     state: restarted
     enabled: yes
 
-# 6. K8s 바이너리 설치 (kubeadm, kubelet 등)
-- name: K8s 패키지 설치
-  dnf:
-    name: [kubelet, kubeadm, kubectl]
+# 6. 쿠버네티스 컴포넌트 설치
+# [Physical Architecture 적용: VMware 내부 노드들을 K8s 클러스터로 변신]
+# kubeadm(클러스터 생성), kubelet(노드 관리), kubectl(명령어 도구)을 설치.
+- name: 6. K8s 바이너리 패키지 설치 (kubelet, kubeadm, kubectl)
+  ansible.builtin.dnf:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
     state: present
     disable_excludes: kubernetes

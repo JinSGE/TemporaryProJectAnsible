@@ -1,0 +1,61 @@
+# 하드웨어 리소스의 한계로 인해 한 서버(Single Server) 내에서 
+# 마스터와 슬레이브를 동시에 구동하는 방식을 
+# '멀티 인스턴스(Multi-Instance)' 구성. 
+# 물리적으로는 한 대의 서버, 포트(Port)와 데이터 디렉토리를 분리하여 
+# 논리적으로 두 대의 DB가 있는 것처럼 속이는 방식.
+
+# =================================================================
+# 단일 서버 내 슬레이브(3307) 추가 및 복제 구성
+# [Physical Architecture: 포트 및 경로 분리를 통한 멀티 인스턴스 구현]
+# =================================================================
+- name: 1. 슬레이브 전용 데이터 디렉토리 생성
+  # [Physical Architecture: 마스터(3306) 데이터와 물리적 경로 분리]
+  ansible.builtin.file:
+    path: /var/lib/mysql_slave
+    state: directory
+    owner: mysql
+    group: mysql
+    mode: '0750'
+
+- name: 2. 슬레이브 설정 파일(my_slave.cnf) 배포
+  # [Logical Architecture: Port 3307 및 Server-ID 2번 할당]
+  ansible.builtin.template:
+    src: my_slave.cnf.j2
+    dest: /etc/my_slave.cnf
+    owner: mysql
+    group: mysql
+
+- name: 3. 슬레이브 인스턴스 데이터 초기화
+  # [Physical Architecture: 별도 경로에 슬레이브 시스템 테이블 생성]
+  ansible.builtin.shell: |
+    mysqld --defaults-file=/etc/my_slave.cnf --initialize-insecure --user=mysql
+  args:
+    creates: /var/lib/mysql_slave/mysql
+
+- name: 4. 슬레이브 서비스 유닛 파일 생성
+  # [Physical Architecture: Systemd를 통한 개별 서비스 제어]
+  ansible.builtin.shell: |
+    cp /usr/lib/systemd/system/mysqld.service /usr/lib/systemd/system/mysqld_slave.service
+    sed -i 's|ExecStart=.*|ExecStart=/usr/sbin/mysqld --defaults-file=/etc/my_slave.cnf|' /usr/lib/systemd/system/mysqld_slave.service
+  args:
+    creates: /usr/lib/systemd/system/mysqld_slave.service
+
+- name: 5. 슬레이브 서비스 시작
+  ansible.builtin.systemd:
+    name: mysqld_slave
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: 6. 마스터-슬레이브 복제 연결 실행
+  # [Logical Architecture: 127.0.0.1:3306을 마스터로 지정하여 복제 시작]
+  ansible.builtin.shell: |
+    mysql --defaults-file=/etc/my_slave.cnf -e "
+    CHANGE MASTER TO 
+      MASTER_HOST='127.0.0.1', 
+      MASTER_PORT=3306, 
+      MASTER_USER='root', 
+      MASTER_PASSWORD='centos!', 
+      MASTER_GET_PUBLIC_KEY=1;
+    START SLAVE;"
+  ignore_errors: yes # 이미 복제가 설정된 경우 충돌 방지

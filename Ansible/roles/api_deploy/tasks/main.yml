@@ -1,33 +1,92 @@
----
+# =================================================================
+# API 계층 배포 (Left Layer)
+# [Logical Architecture: 외부 데이터 소스 및 클라이언트 접점 구축]
+# =================================================================
 - name: 1. API 컨테이너 실행 (Weather API)
-  docker_container:
+  # [Physical Architecture: VMware PC3 서버 내 격리된 환경 제공]
+  community.docker.docker_container:
     name: weather-api
-    image: fastapi-weather:latest  # 실제 이미지 이름으로 수정
+    image: fastapi-weather:latest
     state: started
-    published_ports: "8001:8000"
+    restart_policy: always
+    published_ports: 
+      - "8001:8000"
+    # 💡 의도: 기상 데이터를 수집하여 중앙 데이터 처리 모듈로 전달하는 입구 역할
 
 - name: 2. API 컨테이너 실행 (Logistics API)
-  docker_container:
+  community.docker.docker_container:
     name: logistics-api
     image: fastapi-logistics:latest
     state: started
-    published_ports: "8002:8000"
+    restart_policy: always
+    published_ports: 
+      - "8002:8000"
+    # 💡 의도: 물류 흐름 데이터를 API를 통해 인벤토리 시스템과 동기화
 
 - name: 3. API 컨테이너 실행 (Energy API)
-  docker_container:
+  community.docker.docker_container:
     name: energy-api
     image: fastapi-energy:latest
     state: started
-    published_ports: "8003:8000"
+    restart_policy: always
+    published_ports: 
+      - "8003:8000"
+    # 💡 의도: 에너지 소비 데이터를 수집하여 AI 분석 모듈의 기초 자료 제공
 
-
-# # roles/api_deploy/tasks/main.yml (변수 활용 버전)
-# - name: API 컨테이너들을 일괄 실행합니다
-#   docker_container:
+# =================================================================
+# API 계층 일괄 배포 (Role 기반 최적화) - 변수 사용할 경우 -> 다중 일괄 사용.
+# [Logical Architecture: API -> 데이터 처리 흐름의 확장성 확보]
+# =================================================================
+# - name: API 컨테이너들을 일괄 실행합니다 (Loop 방식)
+#   # [Physical Architecture: 5대 서버 환경에서 리소스 효율적 배분]
+#   community.docker.docker_container:
 #     name: "{{ item.name }}"
 #     image: "{{ item.image }}"
 #     state: started
 #     restart_policy: always
 #     published_ports:
-#       - "{{ item.host_port }}:{{ api_internal_port }}"
-#   loop: "{{ deploy_apis }}"  # host_vars에 정의한 리스트를 순회합니다.
+#       - "{{ item.host_port }}:{{ api_internal_port | default('8000') }}"
+#   # host_vars 또는 group_vars에 정의된 리스트를 순회하며 실행.
+#   loop: "{{ deploy_apis }}"
+#   # 💡 장점: 새로운 API 추가 시 이 Task를 수정할 필요 없이 변수 파일만 업데이트.
+
+###############################################################
+# API 이미지 로컬 폴더 안에서 로드하는 경우
+# [Logical Architecture: API 모듈을 이미지 형태로 구체화]
+# - name: 1. API 소스 코드 복사
+#   ansible.builtin.copy:
+#     src: ./weather_api_source/  # 내 로컬의 소스 경로
+#     dest: /opt/weather-api/     # 서버의 저장 경로
+
+# - name: 2. Docker 이미지 빌드 (Dockerfile 기준)
+#   community.docker.docker_image:
+#     name: fastapi-weather
+#     tag: latest
+#     build:
+#       path: /opt/weather-api/   # Dockerfile이 있는 경로
+#     source: build
+###############################################################
+
+# =================================================================
+# API 배포 전 이미지 준비 단계
+# =================================================================
+
+# - name: [이미지 확보] API 소스 기반 이미지 빌드
+#   community.docker.docker_image:
+#     name: "{{ item.image_name }}"
+#     build:
+#       path: "{{ item.source_path }}"
+#     source: build
+#   loop:
+#     - { image_name: 'fastapi-weather', source_path: '/opt/api/weather' }
+#     - { image_name: 'fastapi-logistics', source_path: '/opt/api/logistics' }
+
+# - name: [배포] 준비된 이미지를 컨테이너로 실행
+#   community.docker.docker_container:
+#     name: "{{ item.name }}"
+#     image: "{{ item.image_name }}:latest"
+#     state: started
+#     published_ports: "{{ item.port }}"
+#   loop:
+#     - { name: 'weather-api', image_name: 'fastapi-weather', port: '8001:8000' }
+# =================================================================

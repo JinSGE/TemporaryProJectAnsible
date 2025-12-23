@@ -1,0 +1,11 @@
+# (중앙: 데이터 저장소)
+
+# MySQL 아키텍처 설정
+mysql_role: "master"
+mysql_server_id: 101
+
+# 스토리지 인프라 (NAS/SAN)
+# nas_ip: "172.16.6.100"
+# nas_path: "/exports/db_data"
+# nas_mount_point: "/mnt/nas_shared"
+# san_device_uuid: "uuid-xxxx-xxxx"

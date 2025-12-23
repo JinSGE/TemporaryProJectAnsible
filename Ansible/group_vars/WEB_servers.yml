@@ -1,0 +1,7 @@
+# (오른쪽: 웹 서비스)
+http_port: 80
+app_version: "1.0.0"
+
+# Nginx 성능 최적화
+nginx_worker_processes: 2
+nginx_max_connections: 1024

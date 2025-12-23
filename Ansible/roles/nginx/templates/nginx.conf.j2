@@ -1,25 +1,66 @@
+# =================================================================
+# Nginx 메인 설정 파일 (Jinja2 Template)
+# [Logical Architecture: 우측(Web)에서 좌측(API)으로의 데이터 요청 흐름 제어]
+# =================================================================
+user root;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /run/nginx.pid;
+
 events {
     worker_connections 1024;
 }
 
 http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # [Physical Architecture: 하이브리드 클라우드 통신을 고려한 로그 포맷]
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access_log main;
+
+    # -------------------------------------------------------------
+    # API 서버 백엔드 설정 (Upstream)
+    # [Logical Architecture: 좌측 API 계층(PC3)과의 연결점 정의]
+    # -------------------------------------------------------------
+    upstream api_backend {
+        server {{ api_server_ip }}:8001; # Weather API 등으로 연결 가능
+        keepalive 32;
+    }
 
     server {
-        listen       80;
-        server_name  localhost;
+        listen 80;
+        server_name {{ ansible_host | default('localhost') }};
 
-        # 정적 콘텐츠 경로
+        # 1. 정적 콘텐츠 경로 (Web Layer)
         location / {
-            root   /usr/share/nginx/html;
-            index  index.html index.htm;
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            try_files $uri $uri/ /index.html;
+        }
+
+        # 2. 리버스 프록시 설정 (API 연결)
+        # [Logical Architecture: Web에서 호출한 /api 요청을 PC3(API 서버)로 전달]
+        location /api/ {
+            proxy_pass http://api_backend/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            
+            # [Physical Architecture: VMware 내부 네트워크 지연 시간 최적화]
+            proxy_connect_timeout 60s;
+            proxy_read_timeout 60s;
         }
 
         # 에러 페이지 설정
-        error_page   500 502 503 504  /50x.html;
+        error_page 500 502 503 504 /50x.html;
         location = /50x.html {
-            root   /usr/share/nginx/html;
+            root /usr/share/nginx/html;
         }
     }
 }

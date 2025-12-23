@@ -1,16 +1,38 @@
----
-- name: 1. Nginx 설치
-  dnf:
+# =================================================================
+# 웹 서버(Web Layer) 인프라 구축
+# [Logical Architecture: 전체 시스템의 우측(Right) - 사용자 접점 및 시각화 계층]
+# - 사용자에게 데이터를 시각화하여 제공하는 Nginx 엔진을 구성.
+# =================================================================
+- name: 1. Nginx 웹 서버 패키지 설치
+  # [Physical Architecture: VMware 내 PC2 서버를 웹 전용 노드로 정의]
+  # - dnf 모듈을 통해 표준 웹 엔진인 Nginx를 설치.
+  ansible.builtin.dnf:
     name: nginx
     state: present
+    update_cache: yes # 패키지 목록 동기화를 통해 설치 실패 충돌 방지
 
-- name: 2. 기본 인덱스 페이지 생성 (테스트용)
-  copy:
-    content: "<h1>Welcome to PC2 Web Server</h1>"
+- name: 2. 기본 인덱스 페이지 생성 (시스템 상태 확인용)
+  # [Logical Architecture: Web 계층의 정상 가동 여부를 확인하기 위한 테스트 엔드포인트]
+  # - 단순 텍스트가 아닌 아키텍처 상의 위치(PC2)를 명시하여 관리 효율 향상.
+  ansible.builtin.copy:
+    content: |
+      <!DOCTYPE html>
+      <html>
+      <head><title>PC2 Web Server</title></head>
+      <body>
+        <h1>Welcome to PC2 Web Server</h1>
+        <p>Status: Logical Architecture - Right (Web Layer) is Active.</p>
+      </body>
+      </html>
     dest: /usr/share/nginx/html/index.html
+    owner: root
+    group: root
+    mode: '0644' # 웹 브라우저가 읽을 수 있도록 공개 권한 부여
 
-- name: 3. Nginx 서비스 시작
-  service:
+- name: 3. Nginx 서비스 활성화 및 시작
+  # [Physical Architecture: 가상 머신 재부팅 후에도 웹 서비스 연속성(High Availability) 보장]
+  # - state: started (현재 기동) / enabled: yes (부팅 시 자동 시작)
+  ansible.builtin.service:
     name: nginx
     state: started
     enabled: yes

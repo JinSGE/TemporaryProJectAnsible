@@ -1,0 +1,53 @@
+# Nginx 프로세스를 실행 - 사용자 설정 (관리자 권한 필요 시 root 사용)
+user root; 
+
+# CPU 코어 수에 맞춰 워커 프로세스 수를 자동 조절 (성능 최적화)
+worker_processes auto; 
+
+# ModSecurity WAF 기능을 사용하기 위한 모듈 로드 (필수)
+load_module modules/ngx_http_modsecurity_module.so; 
+
+# 하나의 워커 프로세스가 동시에 처리할 수 있는 최대 접속 수
+events { 
+    worker_connections 1024; 
+}
+
+# --- WAF(Web Application Firewall) 설정 ---
+http {
+    # ModSecurity 기능 활성화.
+    modsecurity on; 
+    
+    # 보안 규칙(Rule)이 정의된 설정 파일 경로 지정.
+    modsecurity_rules_file /etc/nginx/modsecurity.conf; 
+
+    # --- 로드 밸런싱(Upstream) 설정 ---
+    # [Logical Architecture: API/데이터 처리 서버군으로 트래픽 전달]
+    upstream internal_apps {
+        # Ansible 인벤토리의 'WEB_servers' 그룹에 속한 IP들 자동 리스트업.
+        # PC2-WEB(62)부터 PC6-K8S(66)까지의 서버들이 이곳에 동적으로 추가.
+        {% for host in groups['WEB_servers'] %}
+        server {{ hostvars[host]['ansible_host'] }}:80;
+        {% endfor %}
+    }
+
+    # --- 가상 서버(Server Block) 설정 ---
+    server {
+        # EDGE 서버(PC1)가 외부 트래픽을 받아들일 포트
+        listen 80; 
+        
+        # EDGE 서버의 공인/사설 IP 주소
+        server_name 172.16.6.61; 
+
+        # [Physical Architecture: 외부(AWS/인터넷)에서 들어오는 모든 요청 처리]
+        location / {
+            # 위에서 정의한 upstream(internal_apps) 그룹으로 요청을 넘김. (Reverse Proxy)
+            proxy_pass http ://internal_apps; 
+            
+            # --- 프록시 헤더 설정 (내부 서버가 클라이언트 IP를 알 수 있게 함) ---
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}

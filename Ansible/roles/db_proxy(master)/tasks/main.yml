@@ -1,0 +1,67 @@
+# =================================================================
+# MySQL 기초 설치 및 마스터(3306) 설정
+# [Logical Architecture: 중앙 데이터 센터(Center)의 핵심 데이터 엔진 구축]
+# - 이 엔진은 왼쪽(API)에서 들어오는 데이터를 저장, 오른쪽(Web/Ansible)으로 정보를 제공.
+# =================================================================
+- name: 1. MySQL 커뮤니티 리포지토리 추가
+  # [Physical Architecture: VMware 내부 5대 서버의 패키지 출처 단일화]
+  # - 모든 노드가 동일한 버전의 MySQL 8.0을 사용하도록 공식 리포지토리를 확보.
+  ansible.builtin.get_url:
+    url: https://dev.mysql.com/get/mysql80-community-release-el9-1.noarch.rpm
+    dest: /tmp/mysql-repo.rpm
+    mode: '0644'
+
+- name: 1-1. 리포지토리 RPM 설치
+  # [Physical Architecture: 시스템 패키지 매니저(dnf)에 공식 소스 등록]
+  ansible.builtin.dnf:
+    name: /tmp/mysql-repo.rpm
+    state: present
+    disable_gpg_check: yes # 리포지토리 패키지 자체의 서명 검증 충돌 방지
+
+- name: 2. MySQL 서버 패키지 설치
+  # [Logical Architecture: 데이터 처리 및 영속성을 위한 바이너리 엔진 설치]
+  # - 이 패키지는 이후 구축할 슬레이브(3307) 인스턴스와도 공유되는 물리적 기반.
+  ansible.builtin.dnf:
+    name: mysql-community-server
+    state: present
+    update_cache: yes # 리포지토리 등록 직후 인덱스 불일치 충돌 방지
+
+- name: 3. 마스터(3306) 서비스 시작
+  # [Physical Architecture: VMware 가상 서버 재부팅 시 DB 자동 가동 보장]
+  # - 기본 포트 3306을 사용하는 메인 데이터베이스 인스턴스를 활성화.
+  ansible.builtin.service:
+    name: mysqld
+    state: started
+    enabled: yes
+
+- name: 4. 초기 임시 비밀번호 추출
+  # [Physical Architecture: 서버 로컬 로그(/var/log/mysqld.log) 분석]
+  # - 보안을 위해 최초 생성된 임시 비밀번호를 추출하여 변수(register)에 담음.
+  ansible.builtin.shell: |
+    grep 'temporary password' /var/log/mysqld.log | awk '{print $NF}'
+  register: temp_root_password
+  changed_when: false # 조회 작업이므로 시스템 상태 변경 없음으로 간주
+  failed_when: false  # 이미 설정이 완료되어 로그에 정보가 없는 경우의 충돌 방지
+
+- name: 5. 비밀번호 정책 완화 및 centos! 설정
+  # [Logical Architecture: 테스트 및 개발 편의성을 위한 보안 수준 조정]
+  # - LOW 정책 적용: 'centos!'와 같은 간단한 비밀번호를 허용하여 API 연동 테스트를 원활하게 함.
+  ansible.builtin.shell: |
+    mysql --connect-expired-password -u root -p'{{ temp_root_password.stdout }}' --execute="
+      SET GLOBAL validate_password.policy=LOW;
+      SET GLOBAL validate_password.length=4;
+      ALTER USER 'root'@'localhost' IDENTIFIED BY 'centos!';
+      FLUSH PRIVILEGES;
+    "
+  when: temp_root_password.stdout != "" # 임시 비번이 있을 때만(최초 1회) 실행하여 멱등성 유지
+
+- name: 6. 관리자 자동 접속 설정 (.my.cnf)
+  # [Physical Architecture: Ansible 관리 노드와 DB 노드 간의 인증 브릿지 구축]
+  # - root 홈 디렉토리에 인증 정보를 저장하여, 향후 SQL 스크립트 실행 시 비밀번호 충돌을 제거합니다.
+  ansible.builtin.copy:
+    dest: /root/.my.cnf
+    content: |
+      [client]
+      user=root
+      password=centos!
+    mode: '0600' # 타 사용자의 접근을 차단하는 최소 보안 권한 설정

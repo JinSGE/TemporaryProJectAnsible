@@ -1,28 +1,45 @@
----
-- name: 1. Docker 리포지토리 추가
-  get_url:
+# =================================================================
+# Docker Engine 설치 프로세스
+# [Physical Architecture: VMware 내부 5대 서버의 공통 컨테이너 런타임 구축]
+# =================================================================
+
+- name: 1. Docker 공식 리포지토리 추가
+  # [Logical Architecture: 안정적인 외부 패키지 API 소스 확보]
+  # - 정식 GPG 키가 포함된 리포지토리를 추가하여 보안상 안전한 설치를 보장.
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/centos/docker-ce.repo
     dest: /etc/yum.repos.d/docker-ce.repo
+    mode: '0644' # 설정 파일의 권한을 명시하여 보안 충돌 방지
 
-- name: 2. Docker 엔진 및 유틸리티 설치
-  dnf:
-    name: [docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin]
+- name: 2. Docker 엔진 및 유틸리티 패키지 설치
+  # [Logical Architecture: 데이터 처리 및 API 모듈 구동을 위한 인프라 준비]
+  # - docker-ce: 컨테이너 엔진 핵심
+  # - containerd.io: 쿠버네티스(v1.28.x)와 호환되는 표준 런타임
+  # - docker-compose-plugin: 하이브리드 클라우드 환경의 로컬 테스트용 도구
+  ansible.builtin.dnf:
+    name: 
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
     state: present
+    update_cache: yes # 최신 인덱스 반영으로 버전 미스매치 방지
 
-- name: 3. Docker 서비스 활성화 및 시작
-  service:
+- name: 3. Docker 서비스 활성화 및 시작 (Systemd)
+  # [Physical Architecture: 서버 재부팅 시에도 컨테이너 환경 자동 복구 보장]
+  # - state: started (현재 가동) / enabled: yes (부팅 시 자동 시작)
+  ansible.builtin.service:
     name: docker
     state: started
     enabled: yes
 
-# ---
-# - name: Docker 설치
-#   dnf:
-#     name: [docker-ce, docker-ce-cli, containerd.io]
-#     state: present
-
-# - name: Docker 시작
-#   service:
-#     name: docker
-#     state: started
-#     enabled: yes
+# =================================================================
+# 💡 추가 보완 사항 (충돌 방지 로직)
+# 이 부분은 특정 사용자를 docker라는 그룹안에 넣었을 때만, 작동 고려.
+# =================================================================
+# - name: 4. Docker 사용자 그룹 권한 부여 (선택 사항)
+#   # - root 권한 없이 명령어를 실행할 수 있도록 설정하여 운영 권한 충돌을 최소화.
+#   ansible.builtin.user:
+#     name: "{{ ansible_user | default('root') }}"
+#     groups: docker
+#     append: yes

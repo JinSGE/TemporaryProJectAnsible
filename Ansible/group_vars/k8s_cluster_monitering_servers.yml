@@ -1,0 +1,15 @@
+# (쿠버네티스 및 모니터링)
+k8s_version: "1.28"
+pod_network_cidr: "10.244.0.0/24"
+node_role: "master"
+
+# 컨테이너 및 모니터링
+# cri_socket: "unix:///var/run/containerd/containerd.sock"
+# systemd_cgroup: true
+# monitoring_namespace: "monitoring"
+# grafana_admin_password: "admin_password_123!"
+
+# 모니터링 패키지, 툴
+monitoring_packages:
+  - prometheus
+  - grafana

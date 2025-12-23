@@ -1,5 +1,6 @@
 ---
 # playbooks/01_common_setup.yml 또는 site.yml
+# 말 그대로 제일 먼저 실행되면서 네트워크 관련 or 패키지 설치 파트
 - name: 전체 서버 기초 환경 설정
   hosts: all_nodes
   become: yes

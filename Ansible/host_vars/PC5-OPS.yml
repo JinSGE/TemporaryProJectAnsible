@@ -1,3 +1,0 @@
-# ansible_host: 172.16.6.66
-# pod_network_cidr: "10.244.0.0/16"
-# k8s_node_role: "control-plane"

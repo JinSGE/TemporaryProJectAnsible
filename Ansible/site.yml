@@ -1,52 +1,32 @@
 ---
 # Step 1: 모든 서버 기초 환경 구축 (PC1~PC6)
-- import_playbook: playbooks/01_common_setup.yml
+# - name: 1단계 - 공통 환경 설정.
+# - import_playbook: playbooks/01_common_setup.yml
 
-# # Step 2: PC1 로드밸런서 및 보안 설정
-# - hosts: LB_EDGE_servers
-#   roles:
-#     - HAproxy
-#     - WAF
-
-# # Step 3: PC4 데이터베이스 및 스토리지 설정
-# - import_playbook: playbooks/04_db_storage_setup.yml
-
-# Step 4: PC6 쿠버네티스 클러스터 구축
-- import_playbook: playbooks/02_k8s_install.yml
-
-# # Step 5: 모니터링 및 앱 배포
-# - import_playbook: playbooks/03_deploy_monitoring.yml
-
-# ---
-# - name: 1단계 - 공통 환경 설정
-#   hosts: all_nodes
-#   roles:
-#     - common
-
+# Step 2: PC1 로드밸런서 및 보안 설정.
 # - name: 2단계 - Edge 보안 및 로드밸런서 (PC1)
 #   hosts: LB_EDGE_servers
 #   roles:
 #     - HAproxy
 #     - WAF
 
+# Step 3: 웹 및 API 서버 인프라 구축.
 # - name: 3단계 - 웹 및 API 서버 인프라 (PC2, PC3)
-#   hosts: WEB_API_servers
+#   hosts: app_servers
 #   roles:
-#     - docker
+#     - docker       # 일단 API 서버 이미지 배포용 PC 2,3 사용
 #     - nginx        # PC2 전용
 #     - api_deploy   # PC3 전용
 
+# Step 4: PC4 데이터베이스 및 스토리지 설정
 # - name: 4단계 - DB 및 스토리지 (PC4)
-#   hosts: DB_servers
-#   roles:
-#     - mysql_master_slave
-#     - db_proxy
-#     - storage_mount
+# - import_playbook: playbooks/04_db_storage_setup.yml
 
-# - name: 5단계 - K8s 플랫폼 및 모니터링 (PC6)
-#   hosts: k8s_cluster_monitering_servers
-#   roles:
-#     - k8s_base
-#     - k8s_master
-#     - monitoring
+# Step 5: PC6 쿠버네티스 클러스터 구축
+# - name: 5단계 - K8s 플랫폼 (PC6)
+# - import_playbook: playbooks/02_k8s_install.yml
+
+# Step 6: 모니터링 및 앱 배포
+# - name: 6단계 - 모니터링 (PC6)
+# - import_playbook: playbooks/03_deploy_monitoring.yml
 
