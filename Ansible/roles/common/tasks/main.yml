@@ -40,44 +40,44 @@
     state: present
   loop: "{{ infrastructure_hosts }}"
 
+# 5-1. EPEL 저장소 설치 (htop 등을 찾기 위해 필요)
+- name: EPEL 저장소 설치
+  yum:
+    name: epel-release
+    state: present
+
 # 6. 패키지 설치 파트 (그룹별 분배)
 - name: 6-1. [모든 노드] 공통 필수 유틸리티 설치
   ansible.builtin.dnf:
     name: "{{ common_packages }}"
     state: present
 
-- name: 6-2. [LB_EDGE] 네트워크 진단 및 보안 특화 툴 설치
-  ansible.builtin.dnf:
-    name: "{{ edge_packages }}"
-    state: present
-  when: "'LB_EDGE_servers' in group_names"
+# - name: 6-2. [LB_EDGE] 네트워크 진단 및 보안 특화 툴 설치
+#   ansible.builtin.dnf:
+#     name: "{{ edge_packages }}"
+#     state: present
+#   when: "'LB_EDGE_servers' in group_names"
 
-- name: 6-3. [DB] 데이터 동기화 및 백업 툴 설치
-  ansible.builtin.dnf:
-    name:
-      - rsync
-    state: present
-  when: "'DB_servers' in group_names"
-
-- name: 6-4. [K8S_Monitoring] 모니터링 시스템 패키지 설치
-  ansible.builtin.dnf:
-    name: "{{ monitoring_packages }}"
-    state: present
-  when: "'k8s_cluster_monitering_servers' in group_names"
+# - name: 6-3. [DB] 데이터 동기화 및 백업 툴 설치
+#   ansible.builtin.dnf:
+#     name:
+#       - rsync
+#     state: present
+#   when: "'DB_servers' in group_names"
 
 # 7. 네트워크 인터페이스 설정 - 마지막에 전체 서버 구성되었을 때 사용.
 # 이 부분은 현재 각자 브릿지로 Windows GW에 연동해서 사용중
 # LB 서버가 완벽하게 구현되었을 경우, 해당 파트를 통해서 내부망 공개 X
 # (외부에서 내부망 접근을 차단하고 막아주는 용도)
-- name: 7. 내부 노드 게이트웨이 및 DNS 설정 (NMCLI)
-  block:
-    - name: 네트워크 커넥션 설정 변경
-      community.general.nmcli:
-        conn_name: "eth0"
-        gw4: 172.16.6.61
-        dns4: [8.8.8.8, 8.8.4.4]
-        state: present
-    - name: 인터페이스 재시작
-      ansible.builtin.shell: nmcli connection up "eth0"
-  # PC1-EDGE(L3 Gateway 역할)를 제외한 나머지 노드에만 적용
-  when: inventory_hostname != 'PC1-EDGE'
+# - name: 7. 내부 노드 게이트웨이 및 DNS 설정 (NMCLI)
+#   block:
+#     - name: 네트워크 커넥션 설정 변경
+#       community.general.nmcli:
+#         conn_name: "eth0"
+#         gw4: 172.16.6.61
+#         dns4: [8.8.8.8, 8.8.4.4]
+#         state: present
+#     - name: 인터페이스 재시작
+#       ansible.builtin.shell: nmcli connection up "eth0"
+#   # PC1-EDGE(L3 Gateway 역할)를 제외한 나머지 노드에만 적용
+#   when: inventory_hostname != 'PC1-EDGE'

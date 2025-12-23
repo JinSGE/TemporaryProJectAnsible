@@ -28,9 +28,45 @@
   changed_when: "'has been added' in helm_repo_result.stdout"
 
 # =================================================================
-# 3. Prometheus & Grafana 통합 스택 배포
-# [Physical/Logical Architecture 통합: VMware 5대 노드 환경 최적화]
+# 3. Prometheus & Grafana 초경량 배포 (Diet Version)
+# [Physical: 리소스 점유 최소화 / Logical: 핵심 지표 위주 모니터링]
 # =================================================================
-- name: 3. Prometheus & Grafana 통합 스택 설치 (upgrade --install 사용)
-  # - upgrade --install: 기존 설치 유무와 상관없이 상태를 일관되게 유지(Conflict 방지).
+- name: 3. 모니터링 스택 초경량 설치 (리소스 사양 제거)
   ansible.builtin.shell: |
+    helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack \
+    --create-namespace \
+    --namespace monitoring \
+    --set grafana.adminPassword=admin123! \
+    --set alertmanager.enabled=true \  
+    --set kubeStateMetrics.enabled=true \ 
+    --set nodeExporter.enabled=true \  
+    --set prometheusOperator.admissionWebhooks.enabled=false \  
+    --set defaultRules.create=true \  
+    --set prometheus.prometheusSpec.retention=1d \ 
+    --set grafana.enabled=true \  
+    --wait 
+
+# =================================================================
+# 4. 배포 상태 확인
+# =================================================================
+- name: 4. 모니터링 Pod 실행 상태 확인
+  ansible.builtin.shell: kubectl get pods -n monitoring
+  register: pod_status
+  changed_when: false
+
+- name: 4-1. Pod 상태 출력
+  ansible.builtin.debug:
+    var: pod_status.stdout_lines
+
+# 그라파나 서비스 타입을 NodePort로 변경
+# kubectl patch svc prometheus-stack-grafana -n monitoring -p '{"spec": {"type": "NodePort"}}'
+# kubectl patch svc prometheus-stack-kube-prom-operator -n monitoring -p '{"spec": {"type": "NodePort"}}'
+# kubectl patch svc prometheus-stack-prometheus-node-exporter -n monitoring -p '{"spec": {"type": "NodePort"}}'
+
+# 포트 번호 확인
+# kubectl get svc -n monitoring prometheus-stack-grafana
+
+# 접속
+# URL: http://172.16.6.66:<확인한_5자리_포트>
+# ID: admin
+# Password: admin123! (아까 헬름 차트 설치 시 설정한 비밀번호)

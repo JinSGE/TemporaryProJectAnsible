@@ -8,8 +8,3 @@ node_role: "master"
 # systemd_cgroup: true
 # monitoring_namespace: "monitoring"
 # grafana_admin_password: "admin_password_123!"
-
-# 모니터링 패키지, 툴
-monitoring_packages:
-  - prometheus
-  - grafana

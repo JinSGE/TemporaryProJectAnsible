@@ -1,7 +1,6 @@
 ---
 # Step 1: 모든 서버 기초 환경 구축 (PC1~PC6)
-# - name: 1단계 - 공통 환경 설정.
-# - import_playbook: playbooks/01_common_setup.yml
+- import_playbook: playbooks/01_common_setup.yml
 
 # Step 2: PC1 로드밸런서 및 보안 설정.
 # - name: 2단계 - Edge 보안 및 로드밸런서 (PC1)
@@ -19,14 +18,11 @@
 #     - api_deploy   # PC3 전용
 
 # Step 4: PC4 데이터베이스 및 스토리지 설정
-# - name: 4단계 - DB 및 스토리지 (PC4)
 # - import_playbook: playbooks/04_db_storage_setup.yml
 
 # Step 5: PC6 쿠버네티스 클러스터 구축
-# - name: 5단계 - K8s 플랫폼 (PC6)
-# - import_playbook: playbooks/02_k8s_install.yml
+- import_playbook: playbooks/02_k8s_install.yml
 
 # Step 6: 모니터링 및 앱 배포
-# - name: 6단계 - 모니터링 (PC6)
-# - import_playbook: playbooks/03_deploy_monitoring.yml
+- import_playbook: playbooks/03_deploy_monitoring.yml
 
