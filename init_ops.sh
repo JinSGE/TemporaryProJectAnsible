@@ -11,6 +11,7 @@ sudo pip3 install --upgrade pip
 
 echo "[3/4] Ansible 프로젝트 폴더 구조 생성"
 # 논리적 아키텍처 흐름에 따른 폴더 구성 (API -> 데이터 -> Ansible 제어)
+# 폴더 생성 부분은 여하에 따라 생략하거나 하고 사용해야함.
 mkdir -p ~/Ansible/{playbooks,roles,group_vars,host_vars,templates}
 cd ~/Ansible
 mkdir -p roles/{common,docker,HAproxy,WAF,nginx,api_deploy,mysql_master_slave,db_proxy,storage_mount,k8s_base,k8s_master,monitoring}/tasks
