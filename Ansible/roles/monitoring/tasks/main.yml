@@ -1,72 +1,74 @@
 # =================================================================
-# 1. Helm 패키지 매니저 설치
-# [Physical Architecture 적용: 제어 노드(Ansible Control)의 관리 도구 표준화]
+# PC6-Kubernetes 모니터링 자동화 플레이북 (Diet Version)
+# [Logical: 분리형 구조 / Physical: VMware 리소스 최적화]
 # =================================================================
+
+# 1. Helm 패키지 매니저 설치 및 환경 표준화
 - name: 1. Helm 설치 스크립트 다운로드
   ansible.builtin.get_url:
     url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
     dest: /tmp/get_helm.sh
     mode: '0755'
 
-- name: 1-1. Helm 실행 파일 설치
-  # - 멱등성(Idempotency) 보장: /usr/local/bin/helm 파일이 이미 존재시, 실행 건너뛰기.
+- name: 1-1. Helm 실행 파일 설치 (멱등성 보장)
   ansible.builtin.shell: /tmp/get_helm.sh
   args:
     creates: /usr/local/bin/helm
 
-# =================================================================
-# 2. 레포지토리 관리
-# [Logical Architecture 적용: API 계층을 통한 외부 모니터링 소스 연동]
-# =================================================================
-- name: 2. Prometheus community 레포지토리 추가
-  # - 최신 모니터링 차트 확보를 위해 레포지토리를 등록, 인덱스 업데이트.
+# 2. 레포지토리 관리 (API 계층 연동)
+- name: 2. Prometheus & Grafana 레포지토리 추가
   ansible.builtin.shell: |
     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo add grafana https://grafana.github.io/helm-charts
     helm repo update
-  register: helm_repo_result
-  # - 이미 등록된 경우 'changed' 상태가 되지 않도록 제어, 불필요한 리소스 소모를 방지.
-  changed_when: "'has been added' in helm_repo_result.stdout"
 
-# =================================================================
-# 3. Prometheus & Grafana 초경량 배포 (Diet Version)
-# [Physical: 리소스 점유 최소화 / Logical: 핵심 지표 위주 모니터링]
-# =================================================================
-- name: 3. 모니터링 스택 초경량 설치 (리소스 사양 제거)
+# 3. Flannel 네트워크 인프라 교정 (중요: 혈관 복구)
+# [Physical: VMware 내부 통신 장애 선제적 방어]
+- name: 3. Flannel 네트워크 환경 파일 생성 (CIDR 10.244.0.0/24 반영)
+  ansible.builtin.copy:
+    dest: /run/flannel/subnet.env
+    content: |
+      FLANNEL_NETWORK=10.244.0.0/24
+      FLANNEL_SUBNET=10.244.0.1/24
+      FLANNEL_MTU=1450
+      FLANNEL_IPMASQ=true
+
+- name: 3-1. 네트워크 엔진(Flannel) 재시작
   ansible.builtin.shell: |
-    helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack \
-    --create-namespace \
+    kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+    kubectl delete pods -n kube-flannel --all
+
+# 4. 모니터링 컴포넌트 단독 배포 (Standalone 방식)
+# [Logical: DB(Prometheus)와 UI(Grafana)의 명확한 분리]
+- name: 4. Prometheus 단독 설치 (리소스 점유 최소화)
+  ansible.builtin.shell: |
+    helm upgrade --install prometheus prometheus-community/prometheus \
+    --namespace monitoring --create-namespace \
+    --set alertmanager.enabled=false \
+    --set pushgateway.enabled=false \
+    --set server.persistentVolume.enabled=false \
+    --set server.service.port=80  # 기준 포트 80 설정
+
+- name: 4-1. Grafana 단독 설치 (NodePort 고정 및 비번 설정)
+  ansible.builtin.shell: |
+    helm upgrade --install grafana grafana/grafana \
     --namespace monitoring \
-    --set grafana.adminPassword=admin123! \
-    --set alertmanager.enabled=true \  
-    --set kubeStateMetrics.enabled=true \ 
-    --set nodeExporter.enabled=true \  
-    --set prometheusOperator.admissionWebhooks.enabled=false \  
-    --set defaultRules.create=true \  
-    --set prometheus.prometheusSpec.retention=1d \ 
-    --set grafana.enabled=true \  
-    --wait 
+    --set adminPassword=admin123! \
+    --set service.type=NodePort \
+    --set service.nodePort=30432
 
-# =================================================================
-# 4. 배포 상태 확인
-# =================================================================
-- name: 4. 모니터링 Pod 실행 상태 확인
-  ansible.builtin.shell: kubectl get pods -n monitoring
-  register: pod_status
-  changed_when: false
+# 5. 상태 확인 및 연동 가이드 출력
+- name: 5. 최종 배포 상태 확인
+  ansible.builtin.shell: |
+    echo "--- POD STATUS ---"
+    kubectl get pods -n monitoring
+    echo "--- DNS STATUS ---"
+    kubectl get pods -n kube-system -l k8s-app=kube-dns
+  register: final_status
 
-- name: 4-1. Pod 상태 출력
+- name: 5-1. 접속 정보 출력
   ansible.builtin.debug:
-    var: pod_status.stdout_lines
-
-# 그라파나 서비스 타입을 NodePort로 변경
-# kubectl patch svc prometheus-stack-grafana -n monitoring -p '{"spec": {"type": "NodePort"}}'
-# kubectl patch svc prometheus-stack-kube-prom-operator -n monitoring -p '{"spec": {"type": "NodePort"}}'
-# kubectl patch svc prometheus-stack-prometheus-node-exporter -n monitoring -p '{"spec": {"type": "NodePort"}}'
-
-# 포트 번호 확인
-# kubectl get svc -n monitoring prometheus-stack-grafana
-
-# 접속
-# URL: http://172.16.6.66:<확인한_5자리_포트>
-# ID: admin
-# Password: admin123! (아까 헬름 차트 설치 시 설정한 비밀번호)
+    msg: 
+      - "Grafana URL: http://172.16.6.66:30432"
+      - "Prometheus Internal URL: http://prometheus-server.monitoring.svc.cluster.local:80"
+      - "ID: admin / PW: admin123!"
